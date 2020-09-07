@@ -1,0 +1,33 @@
+{
+  "name": "procure-backend",
+  "version": "0.1.0",
+  "description": "procure-backend",
+  "main": "app.js",
+  "dependencies": {
+    "accesscontrol": "^2.2.1",
+    "adm-zip": "^0.4.14",
+    "archiver": "^4.0.1",
+    "bcrypt": "^4.0.1",
+    "body-parser": "^1.19.0",
+    "csv-parser": "^2.3.2",
+    "express": "^4.17.1",
+    "express-validator": "^6.4.0",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^5.9.10",
+    "mongoose-auto-increment-reworked": "^1.2.1",
+    "mongoose-unique-validator": "^2.0.3",
+    "multer": "^1.4.2",
+    "nodemailer": "^6.4.6",
+    "pdfkit": "^0.11.0",
+    "uuid": "^8.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.3"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon app.js"
+  },
+  "author": "kubaGzk",
+  "license": "ISC"
+}
