@@ -212,6 +212,12 @@ const patchUser = async (req, res, next) => {
   patchedUser.active = active !== undefined ? active : patchedUser.active;
   patchedUser.role = role || patchedUser.role;
 
+  if(patchedUser.active===false && patchedUser.id===req.user.id){
+    return next(
+      new HttpError("Cannot deactivate logged user.", 405)
+    );
+  }
+
   try {
     await patchedUser.save();
   } catch (err) {
