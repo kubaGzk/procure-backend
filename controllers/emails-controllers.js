@@ -15,11 +15,14 @@ const sendOrder = (orderData) =>
     );
 
     oauth2Client.setCredentials({
-      refresh_token: process.env.OAUTH2_REF_TOKEN
-    })
-
-    const accessToken = await oauth2Client.getAccessToken();
-
+      refresh_token: process.env.OAUTH2_REF_TOKEN,
+    });
+    let accessToken
+    try {
+      accessToken = await oauth2Client.getAccessToken();
+    } catch (err) {
+      console.log(err);
+    }
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -28,11 +31,11 @@ const sendOrder = (orderData) =>
         clientId: process.env.OAUTH2_CLIENT,
         clientSecret: process.env.OAUTH2_CLIENT_SEC,
         refreshToken: process.env.OAUTH2_REF_TOKEN,
-        accessToken: accessToken
-        
-      },tls: {
-        rejectUnauthorized: false
-      }
+        accessToken: accessToken,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
     const supplier = await Supplier.findById(orderData.supplier.id);
     if (!supplier) {
