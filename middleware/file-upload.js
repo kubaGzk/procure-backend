@@ -1,5 +1,6 @@
 const { v4: uuid } = require("uuid");
 const multer = require("multer");
+const uploadStorage = require("./upload-storage");
 
 const MIME_TYPE_MAP = {
   "image/png": "png",
@@ -11,16 +12,21 @@ const MIME_TYPE_MAP = {
 
 const fileUpload = multer({
   limits: 50000,
-  storage: multer.diskStorage({
+  storage: uploadStorage({
     destination: (req, file, cb) => {
-      if (file.mimetype === "text/csv") {
         cb(null, "temp/csv");
-      } else {
-        cb(null, "uploads/images");
-      }
+
     },
     filename: (req, file, cb) => {
       cb(null, uuid() + "." + MIME_TYPE_MAP[file.mimetype]);
+    },
+    s3: (req, file, cb) => {
+      cb(null, {
+        accessKey: process.env.AWS_ACC_KEY,
+        secretKey: process.env.AWS_SEC_KEY,
+        bucketName: process.env.AWS_S3_BUCKET,
+        region: process.env.AWS_REGION,
+      });
     },
   }),
   fileFilter: (req, file, cb) => {

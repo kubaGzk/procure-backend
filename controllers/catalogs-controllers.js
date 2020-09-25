@@ -2,6 +2,7 @@ const { validationResult } = require("express-validator");
 const fs = require("fs");
 const csvParser = require("csv-parser");
 const mongoose = require("mongoose");
+const aws = require("aws-sdk");
 
 const HttpError = require("../models/http-error");
 const Supplier = require("../models/supplier");
@@ -9,6 +10,12 @@ const Supplier = require("../models/supplier");
 const Catalog = require("../models/catalog");
 const CatalogItem = require("../models/catalog-item");
 const Category = require("../models/category");
+
+aws.config.update({
+  accessKeyId: process.env.AWS_ACC_KEY,
+  secretAccessKey: process.env.AWS_SEC_KEY,
+  region: process.env.AWS_REGION,
+});
 
 //CREATE
 const createCatalog = async (req, res, next) => {
@@ -91,10 +98,10 @@ const createCatalog = async (req, res, next) => {
   }
 
   //Setting up image
-  let imageUrl = `uploads\\images\\default_catalog_image.png`;
+  let imageUrl = `default_catalog_image.png`;
 
   if (req.files["image"]) {
-    imageUrl = req.files["image"][0].path;
+    imageUrl = req.files["image"][0].Key;
   }
 
   let newCatalog;
@@ -262,10 +269,10 @@ const updateCatalog = async (req, res, next) => {
   }
 
   //Setting up image
-  let imageUrl = `uploads\\images\\default_catalog_image.png`;
+  let imageUrl = `default_catalog_image.png`;
 
   if (req.files["image"]) {
-    imageUrl = req.files["image"][0].path;
+    imageUrl = req.files["image"][0].Key;
   }
 
   let deletedImages = [];
@@ -340,10 +347,25 @@ const updateCatalog = async (req, res, next) => {
     err && console.log(err);
   });
 
-  //remove
-  for (let url of deletedImages) {
-    if (url !== "uploads\\images\\default_catalog_image.png")
-      fs.unlink(url, (err) => err && console.log(err));
+  //Remove old images from S3
+
+  try {
+    const s3 = new aws.S3();
+
+    const imageKeys = [];
+    for (let url of deletedImages) {
+      if (url !== "default_catalog_image.png") imageKeys.push({ Key: url });
+    }
+
+    await s3
+      .deleteObjects({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Delete: { Objects: imageKeys },
+      })
+      .promise();
+    console.log(`Image deleted`, data);
+  } catch (err) {
+    console.log(`Could not delete objects from S3. ${JSON.stringify(err)}`);
   }
 
   res.json({
@@ -365,7 +387,7 @@ const deleteCatalog = async (req, res, next) => {
       .exec();
     if (!deletedCatalog) throw new Error("Could not find catalog.");
 
-    console.log(deletedCatalog)
+    console.log(deletedCatalog);
 
     deletedCatalog.supplier.catalogs.pull(catalogId);
     await deletedCatalog.supplier.save({ session: sess });
@@ -393,9 +415,31 @@ const deleteCatalog = async (req, res, next) => {
     );
   }
 
-  for (let url of deletedImages) {
-    if (url !== "uploads\\images\\default_catalog_image.png")
-      fs.unlink(url, (err) => err && console.log(err));
+  //Delete images from s3
+
+  try {
+    const s3 = new aws.S3();
+
+    const imageKeys = [];
+    for (let url of deletedImages) {
+      if (url !== "default_catalog_image.png") imageKeys.push({ Key: url });
+    }
+
+    await s3
+      .deleteObjects(
+        {
+          Bucket: process.env.AWS_S3_BUCKET,
+          Delete: { Objects: imageKeys },
+        },
+        (err, data) => {
+          if (err) console.log(err, err.stack);
+        }
+      )
+      .promise();
+    console.log(`Image deleted`, data);
+  } catch (err) {
+    console.log(err);
+    console.log(`Could not delete objects from S3. ${JSON.stringify(err)}`);
   }
 
   res.json({ message: `Deletion of catalog ${catalogId} was succesfull.` });
@@ -436,7 +480,6 @@ const getCatalogs = async (req, res, next) => {
   if (category && category.length !== 0) filters.category = { $in: category };
   if (supplier && supplier.length !== 0) filters.supplier = { $in: supplier };
   if (price) filters.price = { $gte: price.min, $lte: price.max };
-
 
   try {
     //Get catalog items
@@ -573,9 +616,9 @@ const createItem = async (req, res, next) => {
     description,
     price,
     category,
-    image: req.file
-      ? req.file.path
-      : `uploads\\images\\default_catalog_image.png`,
+    image: req.files["image"]
+      ? req.files["image"][0].Key
+      : `default_catalog_image.png`,
     catalog,
     supplier: updatedCatalog.supplier,
   });
@@ -633,9 +676,9 @@ const updateItem = async (req, res, next) => {
     updatedItem.price = price || updatedItem.price;
     updatedItem.category = category || updatedItem.category;
 
-    if (req.file) {
+    if (req.files["image"]) {
       oldImage = updatedItem.image;
-      updatedItem.image = req.file.path;
+      updatedItem.image = req.files["image"][0].Key;
     }
 
     await updatedItem.save({ session: sess });
@@ -659,8 +702,8 @@ const updateItem = async (req, res, next) => {
   }
 
   //REMOVE IMAGE IF REQUIRED
-  if (oldImage && oldImage !== "uploads\\images\\default_catalog_image.png") {
-    let imgItems;
+  let imgItems;
+  if (oldImage) {
     try {
       imgItems = await CatalogItem.find({ image: oldImage });
     } catch (err) {
@@ -672,8 +715,18 @@ const updateItem = async (req, res, next) => {
       );
     }
 
-    imgItems.length === 0 &&
-      fs.unlink(oldImage, (err) => err && console.log(err));
+    if (imgItems.length === 0 && oldImage !== "default_catalog_image.png") {
+      try {
+        const s3 = new aws.S3();
+
+        await s3
+          .deleteObject({ Bucket: process.env.AWS_S3_BUCKET, Key: oldImage })
+          .promise();
+        console.log(`Image deleted ${oldImage}`, data);
+      } catch (err) {
+        console.log(`Could not delete objects from S3. ${JSON.stringify(err)}`);
+      }
+    }
   }
 
   res.json(updatedItem);
@@ -741,11 +794,19 @@ const deleteItem = async (req, res, next) => {
     );
   }
 
-  if (
-    imgUrl !== "uploads\\images\\default_catalog_image.png" &&
-    imgItems.length === 0
-  ) {
-    fs.unlink(imgUrl, (err) => err && console.log(err));
+  if (imgUrl !== "default_catalog_image.png" && imgItems.length === 0) {
+    if (imgItems.length === 0) {
+      try {
+        const s3 = new aws.S3();
+
+        await s3
+          .deleteObject({ Bucket: process.env.AWS_S3_BUCKET, Key: oldImage })
+          .promise();
+        console.log(`Image deleted ${oldImage}`, data);
+      } catch (err) {
+        console.log(`Could not delete objects from S3. ${JSON.stringify(err)}`);
+      }
+    }
   }
   res.json({ message: `Deletion of item ${itemId} was succesfull.` });
 };
