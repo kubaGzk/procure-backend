@@ -7,6 +7,7 @@
     "accesscontrol": "^2.2.1",
     "adm-zip": "^0.4.14",
     "archiver": "^4.0.1",
+    "aws-sdk": "^2.762.0",
     "bcrypt": "^4.0.1",
     "body-parser": "^1.19.0",
     "csv-parser": "^2.3.2",
