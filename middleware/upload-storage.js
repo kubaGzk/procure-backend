@@ -33,15 +33,11 @@ CustomStorage.prototype._handleFile = function _handleFile(req, file, cb) {
   that.getDestination(req, file, (err, destination) => {
     if (err) return cb(err);
 
-    console.log(destination);
-
     that.getFileName(req, file, (err, filename) => {
       if (err) return cb(err);
 
       if (MIME_TYPE_MAP.hasOwnProperty(file.mimetype)) {
         //S3
-
-        console.log("S3")
 
         that.getS3(req, file, (err, credentials) => {
           if (err) return cb(err);
@@ -75,7 +71,6 @@ CustomStorage.prototype._handleFile = function _handleFile(req, file, cb) {
           });
 
           upload.on("part", (details) => {
-            console.log(details);
           });
 
           upload.on("uploaded", (resp) => {
@@ -84,8 +79,6 @@ CustomStorage.prototype._handleFile = function _handleFile(req, file, cb) {
         });
       } else {
         //Local
-
-        console.log("Local")
 
         const finalPath = path.join(destination, filename);
         const outStream = fs.createWriteStream(finalPath);

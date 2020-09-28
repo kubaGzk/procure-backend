@@ -357,15 +357,15 @@ const updateCatalog = async (req, res, next) => {
       if (url !== "default_catalog_image.png") imageKeys.push({ Key: url });
     }
 
-    await s3
+    const s3response = await s3
       .deleteObjects({
         Bucket: process.env.AWS_S3_BUCKET,
         Delete: { Objects: imageKeys },
       })
       .promise();
-    console.log(`Image deleted`, data);
+    console.log(`Image deleted`, s3response);
   } catch (err) {
-    console.log(`Could not delete objects from S3. ${JSON.stringify(err)}`);
+    console.log(`Could not delete objects from S3. ${err}`);
   }
 
   res.json({
@@ -386,8 +386,6 @@ const deleteCatalog = async (req, res, next) => {
       .populate("supplier")
       .exec();
     if (!deletedCatalog) throw new Error("Could not find catalog.");
-
-    console.log(deletedCatalog);
 
     deletedCatalog.supplier.catalogs.pull(catalogId);
     await deletedCatalog.supplier.save({ session: sess });
@@ -425,21 +423,15 @@ const deleteCatalog = async (req, res, next) => {
       if (url !== "default_catalog_image.png") imageKeys.push({ Key: url });
     }
 
-    await s3
-      .deleteObjects(
-        {
-          Bucket: process.env.AWS_S3_BUCKET,
-          Delete: { Objects: imageKeys },
-        },
-        (err, data) => {
-          if (err) console.log(err, err.stack);
-        }
-      )
+    const s3response = await s3
+      .deleteObjects({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Delete: { Objects: imageKeys },
+      })
       .promise();
-    console.log(`Image deleted`, data);
+    console.log(`Image deleted`, s3response);
   } catch (err) {
-    console.log(err);
-    console.log(`Could not delete objects from S3. ${JSON.stringify(err)}`);
+    console.log(`Could not delete objects from S3. ${err}`);
   }
 
   res.json({ message: `Deletion of catalog ${catalogId} was succesfull.` });
@@ -719,12 +711,12 @@ const updateItem = async (req, res, next) => {
       try {
         const s3 = new aws.S3();
 
-        await s3
+        const s3response = await s3
           .deleteObject({ Bucket: process.env.AWS_S3_BUCKET, Key: oldImage })
           .promise();
-        console.log(`Image deleted ${oldImage}`, data);
+        console.log(`Image deleted ${oldImage}`, s3response);
       } catch (err) {
-        console.log(`Could not delete objects from S3. ${JSON.stringify(err)}`);
+        console.log(`Could not delete objects from S3. ${err}`);
       }
     }
   }
@@ -799,12 +791,12 @@ const deleteItem = async (req, res, next) => {
       try {
         const s3 = new aws.S3();
 
-        await s3
-          .deleteObject({ Bucket: process.env.AWS_S3_BUCKET, Key: oldImage })
+        const s3response = await s3
+          .deleteObject({ Bucket: process.env.AWS_S3_BUCKET, Key: imgUrl })
           .promise();
-        console.log(`Image deleted ${oldImage}`, data);
+        console.log(`Image deleted ${imgUrl}`, s3response);
       } catch (err) {
-        console.log(`Could not delete objects from S3. ${JSON.stringify(err)}`);
+        console.log(`Could not delete objects from S3. ${err}`);
       }
     }
   }
