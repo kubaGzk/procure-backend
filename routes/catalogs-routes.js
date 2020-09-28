@@ -4,7 +4,6 @@ const { check } = require("express-validator");
 const checkRole = require("../middleware/check-role");
 const checkAuth = require("../middleware/check-auth");
 const fileUpload = require("../middleware/file-upload");
-const imageUpload = require("../middleware/image-upload");
 
 const catalogsControllers = require("../controllers/catalogs-controllers");
 
@@ -55,9 +54,10 @@ router.post(
 router.get("/filters", catalogsControllers.getFilters);
 
 router.get(
-  "/list", checkRole("readAny", "catalog"),
+  "/list",
+  checkRole("readAny", "catalog"),
   catalogsControllers.getCatalogsList
-)
+);
 
 router.get(
   "/:cid",
@@ -65,10 +65,9 @@ router.get(
   catalogsControllers.getCatalog
 );
 
-
 router.post(
   "/item",
-  imageUpload.single("image"),
+  fileUpload.fields([{ name: "image", maxCount: 1 }]),
   checkRole("createAny", "catalog"),
   [
     check("catalog").not().isEmpty(),
@@ -86,7 +85,7 @@ router.delete(
 );
 router.patch(
   "/item/:iid",
-  imageUpload.single("image"),
+  fileUpload.fields([{ name: "image", maxCount: 1 }]),
   checkRole("updateAny", "catalog"),
   catalogsControllers.updateItem
 );
@@ -95,8 +94,5 @@ router.get(
   checkRole("readAny", "catalog"),
   catalogsControllers.getItem
 );
-
-
-
 
 module.exports = router;

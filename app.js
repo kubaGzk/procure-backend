@@ -65,9 +65,10 @@ app.use((error, req, res, next) => {
 
   if (req.files) {
     for (let file in req.files) {
-      fs.unlink(req.files[file][0].path, (err) => {
-        err && console.log(err);
-      });
+      req.files[file][0].path &&
+        fs.unlink(req.files[file][0].path, (err) => {
+          err && console.log(err);
+        });
     }
   }
 
